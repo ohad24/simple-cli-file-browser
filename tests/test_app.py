@@ -1,10 +1,43 @@
 """Async tests for FileBrowserApp driven via Textual's run_test() pilot."""
 
+import contextlib
 from pathlib import Path
 
 from textual.widgets import DirectoryTree, Footer, Header, TextArea
 
-from file_browser.browser import FileBrowserApp
+from file_browser import browser as browser_module
+from file_browser.browser import FileBrowserApp, _claude_target_dir
+
+
+def test_claude_target_dir_for_directory(tmp_path):
+    assert _claude_target_dir(tmp_path) == tmp_path
+
+
+def test_claude_target_dir_for_file(tmp_path):
+    target = tmp_path / "hello.py"
+    target.write_text("print('hello')\n")
+    assert _claude_target_dir(target) == tmp_path
+
+
+async def test_open_claude_runs_with_highlighted_cwd(tmp_path, monkeypatch):
+    recorded = {}
+
+    def fake_run(args, **kwargs):
+        recorded["args"] = args
+        recorded["cwd"] = kwargs.get("cwd")
+
+    monkeypatch.setattr(browser_module.shutil, "which", lambda _: "/usr/bin/claude")
+    monkeypatch.setattr(browser_module.subprocess, "run", fake_run)
+
+    app = FileBrowserApp(tmp_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        monkeypatch.setattr(app, "suspend", contextlib.nullcontext)
+        await pilot.press("c")
+        await pilot.pause()
+
+    assert recorded["args"] == ["/usr/bin/claude"]
+    assert recorded["cwd"] == str(tmp_path)
 
 
 async def test_mounts_with_widgets_and_subtitle(tmp_path):

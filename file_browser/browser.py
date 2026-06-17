@@ -6,6 +6,8 @@ TODO marker below for the remaining deferred feature (file operations).
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -59,6 +61,7 @@ class FileBrowserApp(App):
         Binding("backspace", "go_to_parent", "Parent dir"),
         Binding("r", "refresh_tree", "Refresh"),
         Binding("p", "toggle_preview", "Preview"),
+        Binding("c", "open_claude", "Claude Code"),
     ]
 
     def __init__(self, start_path: Path) -> None:
@@ -86,6 +89,24 @@ class FileBrowserApp(App):
             self._update_subtitle(parent)
 
     def action_refresh_tree(self) -> None:
+        self.query_one(DirectoryTree).reload()
+
+    def action_open_claude(self) -> None:
+        """Suspend the app and run the `claude` CLI in the highlighted dir."""
+        tree = self.query_one(DirectoryTree)
+        node = tree.cursor_node
+        if node is None or node.data is None:
+            self.notify("No directory highlighted", severity="warning")
+            return
+        target_dir = _claude_target_dir(Path(node.data.path))
+
+        claude = shutil.which("claude")
+        if claude is None:
+            self.notify("`claude` CLI not found on PATH", severity="error")
+            return
+
+        with self.suspend():
+            subprocess.run([claude], cwd=str(target_dir))
         self.query_one(DirectoryTree).reload()
 
     def action_toggle_preview(self) -> None:
@@ -132,6 +153,11 @@ class FileBrowserApp(App):
     # TODO (c): File operations (copy, move, delete, rename).
     # Add bindings (e.g. "d" delete, "n" rename) that act on the highlighted
     # node, using shutil/os, then call DirectoryTree.reload() to refresh.
+
+
+def _claude_target_dir(path: Path) -> Path:
+    """Directory to open Claude in: the path itself if a dir, else its parent."""
+    return path if path.is_dir() else path.parent
 
 
 def _resolve_start_path(argv: list[str]) -> Path:

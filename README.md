@@ -69,9 +69,20 @@ uv run filebrowser /path/to/dir
 | `Backspace`     | Reroot the tree at the parent directory  |
 | `r`             | Refresh / reload the tree                |
 | `p`             | Toggle the text-preview side panel       |
+| `c`             | Open Claude Code in the highlighted directory |
 | `q`             | Quit                                     |
 
 The current root directory is shown in the header subtitle.
+
+## Claude Code integration
+
+Press `c` to launch the [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+CLI in the highlighted directory (or the parent directory of the highlighted
+file). The browser is suspended while `claude` runs and resumes when you exit
+Claude, reloading the tree to pick up any changes.
+
+This requires the `claude` CLI to be installed and available on your `PATH`. If
+it isn't found, the browser shows an error notification and stays open.
 
 ## Debugging (dev console)
 
