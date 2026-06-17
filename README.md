@@ -110,6 +110,29 @@ The suite covers the `_resolve_start_path` helper (unit tests) and the
 `FileBrowserApp` behavior - mounting, parent navigation, refresh, and quit -
 via Textual's async `app.run_test()` pilot.
 
+## Releasing
+
+Releases are built and published automatically by GitHub Actions
+([`.github/workflows/release.yml`](.github/workflows/release.yml)) whenever a
+version tag is pushed. To cut a release:
+
+1. Bump `version` in [`pyproject.toml`](pyproject.toml) and `__version__` in
+   [`file_browser/__init__.py`](file_browser/__init__.py) to the new version
+   (these must match the tag).
+2. Commit the bump.
+3. Tag and push:
+
+   ```bash
+   git tag v0.1.0
+   git push --tags
+   ```
+
+The workflow verifies the tag matches the `pyproject.toml` version, runs the
+test suite, builds the wheel and sdist with `uv build`, and creates a GitHub
+Release with those artifacts attached and auto-generated release notes.
+
+> PyPI publishing will be added later; for now releases live on GitHub.
+
 ## Roadmap
 
 - [x] **(b) Text preview** - show the contents of the selected file in a
