@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A simple Textual-based terminal file browser for the Linux CLI"
 requires-python = ">=3.12"
 dependencies = [
-    "textual>=8.2.7",
+    "textual[syntax]>=8.2.7",
 ]
 
 [project.scripts]

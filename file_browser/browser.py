@@ -1,7 +1,7 @@
 """A simple terminal file browser built with Textual.
 
-v1 supports directory navigation only. See the TODO markers below for the
-deferred features (text preview and file operations).
+Supports directory navigation and a toggleable text-preview side panel. See the
+TODO marker below for the remaining deferred feature (file operations).
 """
 
 from __future__ import annotations
@@ -11,7 +11,36 @@ from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import DirectoryTree, Footer, Header
+from textual.containers import Horizontal
+from textual.widgets import DirectoryTree, Footer, Header, TextArea
+
+# Read at most this many bytes when previewing a file, to stay responsive on
+# large files.
+_PREVIEW_BYTE_LIMIT = 256 * 1024
+
+# Map file extensions to TextArea syntax-highlighting languages. Extensions not
+# listed here fall back to plain text (no highlighting).
+_LANGUAGE_BY_SUFFIX = {
+    ".py": "python",
+    ".md": "markdown",
+    ".markdown": "markdown",
+    ".json": "json",
+    ".toml": "toml",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".html": "html",
+    ".htm": "html",
+    ".css": "css",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".go": "go",
+    ".rs": "rust",
+    ".java": "java",
+    ".sql": "sql",
+    ".xml": "xml",
+}
 
 
 class FileBrowserApp(App):
@@ -19,19 +48,29 @@ class FileBrowserApp(App):
 
     TITLE = "CLI File Browser"
 
+    CSS = """
+    #tree { width: 1fr; }
+    #preview { width: 2fr; display: none; }
+    #preview.visible { display: block; }
+    """
+
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("backspace", "go_to_parent", "Parent dir"),
         Binding("r", "refresh_tree", "Refresh"),
+        Binding("p", "toggle_preview", "Preview"),
     ]
 
     def __init__(self, start_path: Path) -> None:
         super().__init__()
         self._start_path = start_path
+        self._selected_path: Path | None = None
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield DirectoryTree(str(self._start_path), id="tree")
+        with Horizontal():
+            yield DirectoryTree(str(self._start_path), id="tree")
+            yield TextArea.code_editor("", read_only=True, id="preview")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -49,17 +88,46 @@ class FileBrowserApp(App):
     def action_refresh_tree(self) -> None:
         self.query_one(DirectoryTree).reload()
 
+    def action_toggle_preview(self) -> None:
+        """Show or hide the preview panel, loading the selection when shown."""
+        preview = self.query_one("#preview", TextArea)
+        preview.toggle_class("visible")
+        if preview.has_class("visible"):
+            self._load_preview(self._selected_path)
+
+    def on_directory_tree_file_selected(
+        self, event: DirectoryTree.FileSelected
+    ) -> None:
+        self._selected_path = Path(event.path)
+        preview = self.query_one("#preview", TextArea)
+        if preview.has_class("visible"):
+            self._load_preview(self._selected_path)
+
+    def _load_preview(self, path: Path | None) -> None:
+        """Read ``path`` (subject to a size cap) into the preview TextArea."""
+        preview = self.query_one("#preview", TextArea)
+        if path is None:
+            preview.load_text("")
+            preview.language = None
+            return
+
+        try:
+            data = path.read_bytes()[:_PREVIEW_BYTE_LIMIT]
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            preview.language = None
+            preview.load_text("[binary file - no preview]")
+            return
+        except OSError as error:
+            preview.language = None
+            preview.load_text(f"[could not read file: {error}]")
+            return
+
+        preview.language = _LANGUAGE_BY_SUFFIX.get(path.suffix.lower())
+        preview.load_text(text)
+
     def _update_subtitle(self, path: Path) -> None:
         self.sub_title = str(path)
-
-    # TODO (b): Preview text file contents.
-    # Hook into the selection event to read the chosen file and render it in a
-    # side panel (e.g. a Static/TextArea inside a Horizontal layout):
-    #
-    # def on_directory_tree_file_selected(
-    #     self, event: DirectoryTree.FileSelected
-    # ) -> None:
-    #     ...read event.path and show its contents...
 
     # TODO (c): File operations (copy, move, delete, rename).
     # Add bindings (e.g. "d" delete, "n" rename) that act on the highlighted

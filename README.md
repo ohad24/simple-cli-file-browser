@@ -4,8 +4,8 @@ A simple full-screen terminal file browser for the Linux CLI, built with the
 [Textual](https://github.com/textualize/textual) framework. Navigate your
 filesystem with the keyboard using Textual's `DirectoryTree` widget.
 
-This is **v1**, which supports directory navigation only. Text preview and file
-operations are planned (see [Roadmap](#roadmap)).
+This version supports directory navigation and a toggleable text-preview side
+panel. File operations are planned (see [Roadmap](#roadmap)).
 
 ## Prerequisites
 
@@ -68,6 +68,7 @@ uv run filebrowser /path/to/dir
 | `Left`          | Collapse the current folder              |
 | `Backspace`     | Reroot the tree at the parent directory  |
 | `r`             | Refresh / reload the tree                |
+| `p`             | Toggle the text-preview side panel       |
 | `q`             | Quit                                     |
 
 The current root directory is shown in the header subtitle.
@@ -100,8 +101,9 @@ via Textual's async `app.run_test()` pilot.
 
 ## Roadmap
 
-- [ ] **(b) Text preview** - show the contents of the selected file in a side
-  panel (hook: `on_directory_tree_file_selected` in
+- [x] **(b) Text preview** - show the contents of the selected file in a
+  toggleable side panel (`p`), with syntax highlighting (hook:
+  `on_directory_tree_file_selected` in
   [`file_browser/browser.py`](file_browser/browser.py)).
 - [ ] **(c) File operations** - copy, move, delete, and rename, bound to keys
   that act on the highlighted node and reload the tree.
