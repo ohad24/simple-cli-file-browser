@@ -11,10 +11,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+from rich.style import Style
+from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.widgets import DirectoryTree, Footer, Header, TextArea
+from textual.widgets._tree import TOGGLE_STYLE
+from textual.widgets.directory_tree import DirEntry
+from textual.widgets.tree import TreeNode
 
 # Read at most this many bytes when previewing a file, to stay responsive on
 # large files.
@@ -44,6 +49,143 @@ _LANGUAGE_BY_SUFFIX = {
     ".xml": "xml",
 }
 
+# Icons shown to the left of each tree node. Folders use the two icons below;
+# files use the per-extension map, falling back to a generic file icon.
+_FOLDER_ICON = "📁 "
+_FOLDER_OPEN_ICON = "📂 "
+_DEFAULT_FILE_ICON = "📄 "
+
+# Map lowercased file extensions to a display icon (with a trailing space).
+# Several extensions intentionally share an icon (e.g. all config formats).
+_ICON_BY_SUFFIX = {
+    # Source / config / docs
+    ".py": "🐍 ",
+    ".md": "📝 ",
+    ".markdown": "📝 ",
+    ".rst": "📝 ",
+    ".txt": "📄 ",
+    ".log": "📜 ",
+    ".json": "🔧 ",
+    ".toml": "🔧 ",
+    ".yaml": "🔧 ",
+    ".yml": "🔧 ",
+    ".ini": "🔧 ",
+    ".cfg": "🔧 ",
+    ".conf": "🔧 ",
+    ".env": "🔧 ",
+    ".js": "📜 ",
+    ".mjs": "📜 ",
+    ".cjs": "📜 ",
+    ".ts": "📜 ",
+    ".tsx": "📜 ",
+    ".jsx": "📜 ",
+    ".html": "🌐 ",
+    ".htm": "🌐 ",
+    ".css": "🎨 ",
+    ".scss": "🎨 ",
+    ".sh": "🐚 ",
+    ".bash": "🐚 ",
+    ".zsh": "🐚 ",
+    ".go": "🐹 ",
+    ".rs": "🦀 ",
+    ".java": "☕ ",
+    ".c": "⚙️ ",
+    ".h": "⚙️ ",
+    ".cpp": "⚙️ ",
+    ".hpp": "⚙️ ",
+    ".sql": "🗃️ ",
+    ".xml": "🗞️ ",
+    # Images
+    ".png": "🖼️ ",
+    ".jpg": "🖼️ ",
+    ".jpeg": "🖼️ ",
+    ".gif": "🖼️ ",
+    ".bmp": "🖼️ ",
+    ".svg": "🖼️ ",
+    ".webp": "🖼️ ",
+    ".ico": "🖼️ ",
+    # Audio
+    ".mp3": "🎵 ",
+    ".wav": "🎵 ",
+    ".flac": "🎵 ",
+    ".ogg": "🎵 ",
+    ".m4a": "🎵 ",
+    # Video
+    ".mp4": "🎬 ",
+    ".mkv": "🎬 ",
+    ".mov": "🎬 ",
+    ".avi": "🎬 ",
+    ".webm": "🎬 ",
+    # Documents
+    ".pdf": "📕 ",
+    # Archives
+    ".zip": "📦 ",
+    ".tar": "📦 ",
+    ".gz": "📦 ",
+    ".tgz": "📦 ",
+    ".bz2": "📦 ",
+    ".xz": "📦 ",
+    ".7z": "📦 ",
+    ".rar": "📦 ",
+    # Binaries / compiled artifacts
+    ".exe": "⚙️ ",
+    ".bin": "⚙️ ",
+    ".so": "⚙️ ",
+    ".dll": "⚙️ ",
+    ".o": "⚙️ ",
+    ".a": "⚙️ ",
+}
+
+
+def _file_icon(path: Path) -> str:
+    """Return the display icon (with trailing space) for a file ``path``."""
+    return _ICON_BY_SUFFIX.get(path.suffix.lower(), _DEFAULT_FILE_ICON)
+
+
+class FileIconDirectoryTree(DirectoryTree):
+    """A ``DirectoryTree`` that shows per-file-type icons instead of one icon.
+
+    This mirrors Textual's default ``render_label`` styling (folder/file/hidden
+    component classes, extension highlighting) but swaps the leading icon based
+    on the node's path.
+    """
+
+    def render_label(
+        self, node: TreeNode[DirEntry], base_style: Style, style: Style
+    ) -> Text:
+        node_label = node._label.copy()
+        node_label.stylize(style)
+
+        # Before mount we can't resolve component styles; defer to the default.
+        if not self.is_mounted:
+            return node_label
+
+        if node._allow_expand:
+            icon = _FOLDER_OPEN_ICON if node.is_expanded else _FOLDER_ICON
+            prefix = (icon, base_style + TOGGLE_STYLE)
+            node_label.stylize_before(
+                self.get_component_rich_style("directory-tree--folder", partial=True)
+            )
+        else:
+            path = node.data.path if node.data is not None else Path(node_label.plain)
+            prefix = (_file_icon(path), base_style)
+            node_label.stylize_before(
+                self.get_component_rich_style("directory-tree--file", partial=True),
+            )
+            node_label.highlight_regex(
+                r"\..+$",
+                self.get_component_rich_style(
+                    "directory-tree--extension", partial=True
+                ),
+            )
+
+        if node_label.plain.startswith("."):
+            node_label.stylize_before(
+                self.get_component_rich_style("directory-tree--hidden", partial=True)
+            )
+
+        return Text.assemble(prefix, node_label)
+
 
 class FileBrowserApp(App):
     """A minimal file browser: navigate the directory tree with the keyboard."""
@@ -72,7 +214,7 @@ class FileBrowserApp(App):
     def compose(self) -> ComposeResult:
         yield Header()
         with Horizontal():
-            yield DirectoryTree(str(self._start_path), id="tree")
+            yield FileIconDirectoryTree(str(self._start_path), id="tree")
             yield TextArea.code_editor("", read_only=True, id="preview")
         yield Footer()
 

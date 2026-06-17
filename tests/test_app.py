@@ -6,7 +6,55 @@ from pathlib import Path
 from textual.widgets import DirectoryTree, Footer, Header, TextArea
 
 from file_browser import browser as browser_module
-from file_browser.browser import FileBrowserApp, _claude_target_dir
+from file_browser.browser import (
+    _DEFAULT_FILE_ICON,
+    _ICON_BY_SUFFIX,
+    FileBrowserApp,
+    FileIconDirectoryTree,
+    _claude_target_dir,
+    _file_icon,
+)
+
+
+def test_file_icon_known_extension():
+    assert _file_icon(Path("main.py")) == _ICON_BY_SUFFIX[".py"]
+
+
+def test_file_icon_is_case_insensitive():
+    assert _file_icon(Path("README.MD")) == _ICON_BY_SUFFIX[".md"]
+
+
+def test_file_icon_unknown_extension_falls_back():
+    assert _file_icon(Path("data.unknownext")) == _DEFAULT_FILE_ICON
+
+
+def test_file_icon_no_extension_falls_back():
+    assert _file_icon(Path("Makefile")) == _DEFAULT_FILE_ICON
+
+
+async def test_tree_uses_icon_subclass(tmp_path):
+    app = FileBrowserApp(tmp_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        tree = app.query_one(DirectoryTree)
+        assert isinstance(tree, FileIconDirectoryTree)
+
+
+async def test_tree_renders_file_type_icon(tmp_path):
+    (tmp_path / "hello.py").write_text("print('hi')\n")
+    app = FileBrowserApp(tmp_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        tree = app.query_one(FileIconDirectoryTree)
+        await tree.reload()
+        await pilot.pause()
+        py_node = next(
+            child
+            for child in tree.root.children
+            if child.data is not None and child.data.path.name == "hello.py"
+        )
+        label = tree.render_label(py_node, tree.rich_style, tree.rich_style)
+        assert label.plain.startswith(_ICON_BY_SUFFIX[".py"])
 
 
 def test_claude_target_dir_for_directory(tmp_path):
