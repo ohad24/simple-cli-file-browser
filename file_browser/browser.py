@@ -201,6 +201,7 @@ class FileBrowserApp(App):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("backspace", "go_to_parent", "Parent dir"),
+        Binding("l", "descend", "Open dir"),
         Binding("r", "refresh_tree", "Refresh"),
         Binding("p", "toggle_preview", "Preview"),
         Binding("c", "open_claude", "Claude Code"),
@@ -229,6 +230,20 @@ class FileBrowserApp(App):
         if parent != current:
             tree.path = str(parent)
             self._update_subtitle(parent)
+
+    def action_descend(self) -> None:
+        """Reroot the tree at the highlighted directory."""
+        tree = self.query_one(DirectoryTree)
+        node = tree.cursor_node
+        if node is None or node.data is None:
+            self.notify("No directory highlighted", severity="warning")
+            return
+        path = Path(node.data.path)
+        if not path.is_dir():
+            self.notify("Not a directory", severity="warning")
+            return
+        tree.path = str(path)
+        self._update_subtitle(path)
 
     def action_refresh_tree(self) -> None:
         self.query_one(DirectoryTree).reload()

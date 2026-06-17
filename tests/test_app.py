@@ -165,6 +165,44 @@ async def test_backspace_at_root_is_noop(tmp_path):
         assert Path(tree.path) == root
 
 
+async def test_descend_navigates_into_highlighted_dir(tmp_path):
+    child = tmp_path / "child"
+    child.mkdir()
+    app = FileBrowserApp(tmp_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        tree = app.query_one(DirectoryTree)
+        node = next(
+            c
+            for c in tree.root.children
+            if c.data is not None and c.data.path.name == "child"
+        )
+        tree.cursor_line = node.line
+        await pilot.pause()
+        await pilot.press("l")
+        await pilot.pause()
+        assert Path(tree.path) == child
+        assert app.sub_title == str(child)
+
+
+async def test_descend_on_file_is_noop(tmp_path):
+    (tmp_path / "hello.py").write_text("print('hi')\n")
+    app = FileBrowserApp(tmp_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        tree = app.query_one(DirectoryTree)
+        node = next(
+            c
+            for c in tree.root.children
+            if c.data is not None and c.data.path.name == "hello.py"
+        )
+        tree.cursor_line = node.line
+        await pilot.pause()
+        await pilot.press("l")
+        await pilot.pause()
+        assert Path(tree.path) == tmp_path
+
+
 async def test_refresh_keeps_tree(tmp_path):
     app = FileBrowserApp(tmp_path)
     async with app.run_test() as pilot:
