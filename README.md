@@ -9,7 +9,7 @@ panel. File operations are planned (see [Roadmap](#roadmap)).
 
 ## Install
 
-Install the `filebrowser` CLI from [PyPI](https://pypi.org/project/file-browser/):
+Install the `fbrowse` CLI from [PyPI](https://pypi.org/project/file-browser/):
 
 ```bash
 uv tool install file-browser
@@ -27,13 +27,13 @@ Or install the wheel from [GitHub Releases](https://github.com/ohad24/simple-cli
 ```bash
 # newest release (requires the GitHub CLI)
 gh release download --repo ohad24/simple-cli-file-browser \
-  --pattern '*.whl' --dir /tmp/filebrowser
-uv tool install /tmp/filebrowser/*.whl
+  --pattern '*.whl' --dir /tmp/fbrowse
+uv tool install /tmp/fbrowse/*.whl
 ```
 
-(`pipx install /tmp/filebrowser/*.whl` works too if you don't use uv.)
+(`pipx install /tmp/fbrowse/*.whl` works too if you don't use uv.)
 
-After install, run `filebrowser` or `filebrowser /path/to/dir` — no `uv run` needed.
+After install, run `fbrowse` or `fbrowse /path/to/dir` — no `uv run` needed.
 If the command isn't found, run `uv tool update-shell` (or `pipx ensurepath`) and restart
 your shell.
 
@@ -76,7 +76,7 @@ uv add --dev textual-dev      # dev console / tooling
 Start in the current directory:
 
 ```bash
-uv run filebrowser
+uv run fbrowse
 ```
 
 Equivalent module form:
@@ -88,7 +88,7 @@ uv run python -m file_browser
 Start in a specific directory:
 
 ```bash
-uv run filebrowser /path/to/dir
+uv run fbrowse /path/to/dir
 ```
 
 ## Key bindings
@@ -182,5 +182,5 @@ file_browser/
   __main__.py     # `python -m file_browser` entry point
   browser.py      # the Textual app (FileBrowserApp + main())
 tests/            # pytest suite (helper unit tests + async app tests)
-pyproject.toml    # project metadata, deps, and the `filebrowser` script
+pyproject.toml    # project metadata, deps, and the `fbrowse` script
 ```
