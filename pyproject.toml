@@ -1,6 +1,6 @@
 [project]
-name = "file-browser"
-version = "0.1.1"
+name = "fbrowse"
+version = "0.1.2"
 description = "A simple Textual-based terminal file browser for the Linux CLI"
 requires-python = ">=3.12"
 dependencies = [

@@ -168,8 +168,8 @@ wheels = [
 ]
 
 [[package]]
-name = "file-browser"
-version = "0.1.0"
+name = "fbrowse"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "textual", extra = ["syntax"] },

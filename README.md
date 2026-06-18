@@ -9,17 +9,17 @@ panel. File operations are planned (see [Roadmap](#roadmap)).
 
 ## Install
 
-Install the `fbrowse` CLI from [PyPI](https://pypi.org/project/file-browser/):
+Install the `fbrowse` CLI from [PyPI](https://pypi.org/project/fbrowse/):
 
 ```bash
-uv tool install file-browser
+uv tool install fbrowse
 ```
 
 Alternatives:
 
 ```bash
-pipx install file-browser
-pip install file-browser
+pipx install fbrowse
+pip install fbrowse
 ```
 
 Or install the wheel from [GitHub Releases](https://github.com/ohad24/simple-cli-file-browser/releases):
@@ -64,7 +64,7 @@ That's it. `uv sync` reads `pyproject.toml` / `uv.lock` and installs everything
 <summary>How the project was created from scratch (for reference)</summary>
 
 ```bash
-uv init --name file-browser   # create pyproject.toml
+uv init --name fbrowse   # create pyproject.toml
 uv add textual                # runtime dependency
 uv add --dev textual-dev      # dev console / tooling
 ```
@@ -161,7 +161,7 @@ version tag is pushed. To cut a release:
 
 The workflow verifies the tag matches the `pyproject.toml` version, runs the
 test suite, builds the wheel and sdist with `uv build`, publishes to
-[PyPI](https://pypi.org/project/file-browser/) via trusted publishing, and
+[PyPI](https://pypi.org/project/fbrowse/) via trusted publishing, and
 creates a GitHub Release with those artifacts attached and auto-generated
 release notes.
 
