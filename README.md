@@ -7,7 +7,39 @@ filesystem with the keyboard using Textual's `DirectoryTree` widget.
 This version supports directory navigation and a toggleable text-preview side
 panel. File operations are planned (see [Roadmap](#roadmap)).
 
+## Install
+
+Install the `filebrowser` CLI from [PyPI](https://pypi.org/project/file-browser/):
+
+```bash
+uv tool install file-browser
+```
+
+Alternatives:
+
+```bash
+pipx install file-browser
+pip install file-browser
+```
+
+Or install the wheel from [GitHub Releases](https://github.com/ohad24/simple-cli-file-browser/releases):
+
+```bash
+# newest release (requires the GitHub CLI)
+gh release download --repo ohad24/simple-cli-file-browser \
+  --pattern '*.whl' --dir /tmp/filebrowser
+uv tool install /tmp/filebrowser/*.whl
+```
+
+(`pipx install /tmp/filebrowser/*.whl` works too if you don't use uv.)
+
+After install, run `filebrowser` or `filebrowser /path/to/dir` — no `uv run` needed.
+If the command isn't found, run `uv tool update-shell` (or `pipx ensurepath`) and restart
+your shell.
+
 ## Prerequisites
+
+For development from source:
 
 - **Python 3.12+**
 - **[uv](https://docs.astral.sh/uv/)** for dependency management
@@ -128,10 +160,10 @@ version tag is pushed. To cut a release:
    ```
 
 The workflow verifies the tag matches the `pyproject.toml` version, runs the
-test suite, builds the wheel and sdist with `uv build`, and creates a GitHub
-Release with those artifacts attached and auto-generated release notes.
-
-> PyPI publishing will be added later; for now releases live on GitHub.
+test suite, builds the wheel and sdist with `uv build`, publishes to
+[PyPI](https://pypi.org/project/file-browser/) via trusted publishing, and
+creates a GitHub Release with those artifacts attached and auto-generated
+release notes.
 
 ## Roadmap
 
