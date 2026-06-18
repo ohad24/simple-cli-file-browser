@@ -7,7 +7,39 @@ filesystem with the keyboard using Textual's `DirectoryTree` widget.
 This version supports directory navigation and a toggleable text-preview side
 panel. File operations are planned (see [Roadmap](#roadmap)).
 
+## Install
+
+Install the `fbrowse` CLI from [PyPI](https://pypi.org/project/file-browser/):
+
+```bash
+uv tool install file-browser
+```
+
+Alternatives:
+
+```bash
+pipx install file-browser
+pip install file-browser
+```
+
+Or install the wheel from [GitHub Releases](https://github.com/ohad24/simple-cli-file-browser/releases):
+
+```bash
+# newest release (requires the GitHub CLI)
+gh release download --repo ohad24/simple-cli-file-browser \
+  --pattern '*.whl' --dir /tmp/fbrowse
+uv tool install /tmp/fbrowse/*.whl
+```
+
+(`pipx install /tmp/fbrowse/*.whl` works too if you don't use uv.)
+
+After install, run `fbrowse` or `fbrowse /path/to/dir` — no `uv run` needed.
+If the command isn't found, run `uv tool update-shell` (or `pipx ensurepath`) and restart
+your shell.
+
 ## Prerequisites
+
+For development from source:
 
 - **Python 3.12+**
 - **[uv](https://docs.astral.sh/uv/)** for dependency management
@@ -44,7 +76,7 @@ uv add --dev textual-dev      # dev console / tooling
 Start in the current directory:
 
 ```bash
-uv run filebrowser
+uv run fbrowse
 ```
 
 Equivalent module form:
@@ -56,7 +88,7 @@ uv run python -m file_browser
 Start in a specific directory:
 
 ```bash
-uv run filebrowser /path/to/dir
+uv run fbrowse /path/to/dir
 ```
 
 ## Key bindings
@@ -128,10 +160,10 @@ version tag is pushed. To cut a release:
    ```
 
 The workflow verifies the tag matches the `pyproject.toml` version, runs the
-test suite, builds the wheel and sdist with `uv build`, and creates a GitHub
-Release with those artifacts attached and auto-generated release notes.
-
-> PyPI publishing will be added later; for now releases live on GitHub.
+test suite, builds the wheel and sdist with `uv build`, publishes to
+[PyPI](https://pypi.org/project/file-browser/) via trusted publishing, and
+creates a GitHub Release with those artifacts attached and auto-generated
+release notes.
 
 ## Roadmap
 
@@ -150,5 +182,5 @@ file_browser/
   __main__.py     # `python -m file_browser` entry point
   browser.py      # the Textual app (FileBrowserApp + main())
 tests/            # pytest suite (helper unit tests + async app tests)
-pyproject.toml    # project metadata, deps, and the `filebrowser` script
+pyproject.toml    # project metadata, deps, and the `fbrowse` script
 ```

@@ -8,7 +8,7 @@ dependencies = [
 ]
 
 [project.scripts]
-filebrowser = "file_browser.browser:main"
+fbrowse = "file_browser.browser:main"
 
 [build-system]
 requires = ["hatchling"]
