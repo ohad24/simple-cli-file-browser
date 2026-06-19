@@ -1,0 +1,68 @@
+---
+description: Textual app and test patterns for fbrowse
+globs: file_browser/**/*.py,tests/**/*.py
+alwaysApply: false
+---
+
+# Textual patterns
+
+## Keybindings
+
+Add a binding on `FileBrowserApp`, then implement the matching action method:
+
+```python
+# GOOD
+BINDINGS = [..., Binding("n", "rename_node", "Rename")]
+
+def action_rename_node(self) -> None:
+    tree = self.query_one(DirectoryTree)
+    ...
+
+# BAD: ad-hoc key handling outside Binding/action system
+```
+
+See `action_toggle_preview` and `action_go_to_parent` in `file_browser/browser.py`.
+
+## Highlighted node
+
+Read the cursor node from the tree (same pattern as `action_open_claude`):
+
+```python
+tree = self.query_one(DirectoryTree)
+node = tree.cursor_node
+if node is None or node.data is None:
+    self.notify("No directory highlighted", severity="warning")
+    return
+path = Path(node.data.path)
+```
+
+## Filesystem side effects
+
+Use `shutil` or `os`, then refresh the tree:
+
+```python
+self.query_one(DirectoryTree).reload()
+```
+
+## User feedback
+
+Use `self.notify("...", severity="warning"|"error")`. Do not print to stdout.
+
+## External CLI
+
+Suspend the app while a subprocess runs (see `action_open_claude`):
+
+```python
+with self.suspend():
+    subprocess.run([cmd], cwd=str(target_dir))
+```
+
+## Tests
+
+- App behavior: async `app.run_test()` pilot; drive keys with `await pilot.press("q")`
+- Pure helpers: unit-test directly (e.g. `_resolve_start_path`, `_file_icon`)
+- See `tests/test_app.py` for examples
+
+## Preview
+
+Respect `_PREVIEW_BYTE_LIMIT`. Binary or non-UTF-8 files show placeholder text in the preview, not uncaught exceptions.

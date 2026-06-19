@@ -1,0 +1,44 @@
+---
+description: fbrowse project context
+alwaysApply: true
+---
+
+# fbrowse (simple-cli-file-browser)
+
+Terminal file browser for Linux, built with Textual 8.x. PyPI package name: `fbrowse`.
+
+## Layout
+
+- `file_browser/browser.py` — almost all app logic (`FileBrowserApp`, `FileIconDirectoryTree`, helpers)
+- `tests/test_app.py` — pytest suite with Textual `run_test()` pilot tests
+- `pyproject.toml` — deps, `fbrowse` entry point, pytest config
+
+## Stack and workflow
+
+- Python 3.12+, dependency management via `uv sync`
+- Runtime dep: `textual[syntax]`
+- Run: `uv run fbrowse` or `uv run python -m file_browser`
+- Test: `uv run pytest`
+- Dev console: `uv run textual console` + `uv run textual run --dev file_browser/browser.py`
+
+## Architecture
+
+- `FileBrowserApp` composes `FileIconDirectoryTree` (custom `DirectoryTree`) and an optional `TextArea` preview panel
+- Header subtitle shows the current tree root
+- File selection hook: `on_directory_tree_file_selected`
+- Preview: `_load_preview` (byte cap via `_PREVIEW_BYTE_LIMIT`, syntax via `_LANGUAGE_BY_SUFFIX`)
+
+## Extension points
+
+- New keyboard features: add to `BINDINGS`, implement `action_<name>` on `FileBrowserApp`
+- Filesystem changes: mutate with `shutil`/`os`, then `DirectoryTree.reload()`
+
+## Conventions
+
+- Keep diffs minimal; match existing Textual patterns (`Binding`, actions, `notify()`)
+- Add or update pilot tests in `tests/test_app.py` for behavior changes
+- Do not add heavy dependencies without discussion
+
+## Roadmap
+
+Next planned feature: file operations (copy, move, delete, rename). See TODO in `file_browser/browser.py` and README roadmap.
