@@ -305,11 +305,37 @@ class FileBrowserApp(App):
         preview.load_text(text)
 
     def _update_subtitle(self, path: Path) -> None:
-        self.sub_title = str(path)
+        git_info = _get_git_info(path)
+        self.sub_title = f"{path}  {git_info}" if git_info else str(path)
 
     # TODO (c): File operations (copy, move, delete, rename).
     # Add bindings (e.g. "d" delete, "n" rename) that act on the highlighted
     # node, using shutil/os, then call DirectoryTree.reload() to refresh.
+
+
+def _get_git_info(path: Path) -> str | None:
+    """Return a short git status string for *path*, or None if not in a repo.
+
+    Returns e.g. "⎇ main" or "⎇ main *" (asterisk = dirty working tree).
+    Runs with a tight timeout so it never blocks the UI.
+    """
+    try:
+        branch = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=2,
+        )
+        if branch.returncode != 0:
+            return None
+        branch_name = branch.stdout.strip()
+
+        dirty = subprocess.run(
+            ["git", "-C", str(path), "status", "--porcelain"],
+            capture_output=True, text=True, timeout=2,
+        )
+        suffix = " *" if dirty.returncode == 0 and dirty.stdout.strip() else ""
+        return f"⎇ {branch_name}{suffix}"
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
 
 
 def _claude_target_dir(path: Path) -> Path:

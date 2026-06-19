@@ -1,6 +1,7 @@
 """Async tests for FileBrowserApp driven via Textual's run_test() pilot."""
 
 import contextlib
+from collections import namedtuple
 from pathlib import Path
 
 from textual.widgets import DirectoryTree, Footer, Header, TextArea
@@ -13,7 +14,11 @@ from file_browser.browser import (
     FileIconDirectoryTree,
     _claude_target_dir,
     _file_icon,
+    _get_git_info,
 )
+
+# Lightweight stand-in for subprocess.CompletedProcess used in git tests.
+_FakeResult = namedtuple("_FakeResult", ["returncode", "stdout"])
 
 
 def test_file_icon_known_extension():
@@ -71,6 +76,9 @@ async def test_open_claude_runs_with_highlighted_cwd(tmp_path, monkeypatch):
     recorded = {}
 
     def fake_run(args, **kwargs):
+        # git calls from _get_git_info: simulate "not a repo" cleanly.
+        if args and args[0] == "git":
+            return _FakeResult(1, "")
         recorded["args"] = args
         recorded["cwd"] = kwargs.get("cwd")
 
@@ -220,3 +228,66 @@ async def test_quit_exits_app(tmp_path):
         await pilot.pause()
     assert app._return_value is None
     assert not app.is_running
+
+
+# ---------------------------------------------------------------------------
+# _get_git_info unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_get_git_info_not_in_repo(tmp_path):
+    # tmp_path is never a git repo — real git call returns non-zero exit code.
+    assert _get_git_info(tmp_path) is None
+
+
+def test_get_git_info_returns_branch(tmp_path, monkeypatch):
+    def fake_run(args, **kwargs):
+        if "rev-parse" in args:
+            return _FakeResult(0, "main\n")
+        return _FakeResult(0, "")  # clean working tree
+
+    monkeypatch.setattr(browser_module.subprocess, "run", fake_run)
+    assert _get_git_info(tmp_path) == "⎇ main"
+
+
+def test_get_git_info_dirty_suffix(tmp_path, monkeypatch):
+    def fake_run(args, **kwargs):
+        if "rev-parse" in args:
+            return _FakeResult(0, "main\n")
+        return _FakeResult(0, " M file.py\n")  # dirty working tree
+
+    monkeypatch.setattr(browser_module.subprocess, "run", fake_run)
+    assert _get_git_info(tmp_path) == "⎇ main *"
+
+
+def test_get_git_info_git_not_found(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        browser_module.subprocess,
+        "run",
+        lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError()),
+    )
+    assert _get_git_info(tmp_path) is None
+
+
+def test_get_git_info_timeout(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        browser_module.subprocess,
+        "run",
+        lambda *a, **k: (_ for _ in ()).throw(
+            browser_module.subprocess.TimeoutExpired("git", 2)
+        ),
+    )
+    assert _get_git_info(tmp_path) is None
+
+
+async def test_subtitle_includes_git_branch(tmp_path, monkeypatch):
+    def fake_run(args, **kwargs):
+        if "rev-parse" in args:
+            return _FakeResult(0, "feat/my-branch\n")
+        return _FakeResult(0, "")
+
+    monkeypatch.setattr(browser_module.subprocess, "run", fake_run)
+    app = FileBrowserApp(tmp_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+    assert "⎇ feat/my-branch" in app.sub_title

@@ -66,3 +66,20 @@ with self.suspend():
 ## Preview
 
 Respect `_PREVIEW_BYTE_LIMIT`. Binary or non-UTF-8 files show placeholder text in the preview, not uncaught exceptions.
+
+## Git info
+
+Use `_get_git_info(path)` to get a short branch+dirty string for any path.
+It returns `None` when outside a git repo or when `git` is not on PATH.
+Always pass the result through `_update_subtitle` — do not call it directly
+from action methods.
+
+When writing tests that monkeypatch `subprocess.run` globally, handle git calls
+explicitly so `_get_git_info` does not crash:
+
+```python
+def fake_run(args, **kwargs):
+    if args and args[0] == "git":
+        return _FakeResult(1, "")  # simulate "not a repo"
+    ...  # rest of stub
+```
