@@ -305,11 +305,39 @@ class FileBrowserApp(App):
         preview.load_text(text)
 
     def _update_subtitle(self, path: Path) -> None:
-        self.sub_title = str(path)
+        git_info = _get_git_info(path)
+        self.sub_title = f"{path}  {git_info}" if git_info else str(path)
 
     # TODO (c): File operations (copy, move, delete, rename).
     # Add bindings (e.g. "d" delete, "n" rename) that act on the highlighted
     # node, using shutil/os, then call DirectoryTree.reload() to refresh.
+
+
+def _get_git_info(path: Path) -> str | None:
+    """Return a short git status string for *path*, or None if not in a repo.
+
+    Returns e.g. "⎇ main" or "⎇ main *" (asterisk = dirty working tree).
+    Blocks the calling thread for up to the configured timeout while the
+    subprocess runs; the timeout bounds worst-case latency.
+    """
+    directory = path if path.is_dir() else path.parent
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(directory), "status", "--porcelain", "--branch"],
+            capture_output=True, text=True, timeout=2,
+        )
+        if result.returncode != 0:
+            return None
+        lines = result.stdout.splitlines()
+        if not lines:
+            return None
+        # First line is "## branch...remote [ahead/behind]" or "## HEAD (no branch)"
+        header = lines[0][3:]  # strip leading "## "
+        branch_name = header.split("...")[0].split(" ")[0]
+        suffix = " *" if len(lines) > 1 else ""
+        return f"⎇ {branch_name}{suffix}"
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
 
 
 def _claude_target_dir(path: Path) -> Path:
