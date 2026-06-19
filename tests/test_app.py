@@ -235,28 +235,32 @@ async def test_quit_exits_app(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_get_git_info_not_in_repo(tmp_path):
-    # tmp_path is never a git repo — real git call returns non-zero exit code.
+def test_get_git_info_not_in_repo(tmp_path, monkeypatch):
+    # Simulate git returning a non-zero exit code (not a repo) without
+    # hitting the real git binary so the test is environment-independent.
+    monkeypatch.setattr(
+        browser_module.subprocess,
+        "run",
+        lambda *a, **k: _FakeResult(128, "fatal: not a git repository\n"),
+    )
     assert _get_git_info(tmp_path) is None
 
 
 def test_get_git_info_returns_branch(tmp_path, monkeypatch):
-    def fake_run(args, **kwargs):
-        if "rev-parse" in args:
-            return _FakeResult(0, "main\n")
-        return _FakeResult(0, "")  # clean working tree
-
-    monkeypatch.setattr(browser_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        browser_module.subprocess,
+        "run",
+        lambda *a, **k: _FakeResult(0, "## main...origin/main\n"),
+    )
     assert _get_git_info(tmp_path) == "⎇ main"
 
 
 def test_get_git_info_dirty_suffix(tmp_path, monkeypatch):
-    def fake_run(args, **kwargs):
-        if "rev-parse" in args:
-            return _FakeResult(0, "main\n")
-        return _FakeResult(0, " M file.py\n")  # dirty working tree
-
-    monkeypatch.setattr(browser_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        browser_module.subprocess,
+        "run",
+        lambda *a, **k: _FakeResult(0, "## main...origin/main\n M file.py\n"),
+    )
     assert _get_git_info(tmp_path) == "⎇ main *"
 
 
@@ -281,12 +285,11 @@ def test_get_git_info_timeout(tmp_path, monkeypatch):
 
 
 async def test_subtitle_includes_git_branch(tmp_path, monkeypatch):
-    def fake_run(args, **kwargs):
-        if "rev-parse" in args:
-            return _FakeResult(0, "feat/my-branch\n")
-        return _FakeResult(0, "")
-
-    monkeypatch.setattr(browser_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        browser_module.subprocess,
+        "run",
+        lambda *a, **k: _FakeResult(0, "## feat/my-branch...origin/feat/my-branch\n"),
+    )
     app = FileBrowserApp(tmp_path)
     async with app.run_test() as pilot:
         await pilot.pause()

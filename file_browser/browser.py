@@ -317,22 +317,24 @@ def _get_git_info(path: Path) -> str | None:
     """Return a short git status string for *path*, or None if not in a repo.
 
     Returns e.g. "⎇ main" or "⎇ main *" (asterisk = dirty working tree).
-    Runs with a tight timeout so it never blocks the UI.
+    Blocks the calling thread for up to the configured timeout while the
+    subprocess runs; the timeout bounds worst-case latency.
     """
+    directory = path if path.is_dir() else path.parent
     try:
-        branch = subprocess.run(
-            ["git", "-C", str(path), "rev-parse", "--abbrev-ref", "HEAD"],
+        result = subprocess.run(
+            ["git", "-C", str(directory), "status", "--porcelain", "--branch"],
             capture_output=True, text=True, timeout=2,
         )
-        if branch.returncode != 0:
+        if result.returncode != 0:
             return None
-        branch_name = branch.stdout.strip()
-
-        dirty = subprocess.run(
-            ["git", "-C", str(path), "status", "--porcelain"],
-            capture_output=True, text=True, timeout=2,
-        )
-        suffix = " *" if dirty.returncode == 0 and dirty.stdout.strip() else ""
+        lines = result.stdout.splitlines()
+        if not lines:
+            return None
+        # First line is "## branch...remote [ahead/behind]" or "## HEAD (no branch)"
+        header = lines[0][3:]  # strip leading "## "
+        branch_name = header.split("...")[0].split(" ")[0]
+        suffix = " *" if len(lines) > 1 else ""
         return f"⎇ {branch_name}{suffix}"
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return None
