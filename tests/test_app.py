@@ -230,6 +230,43 @@ async def test_quit_exits_app(tmp_path):
     assert not app.is_running
 
 
+async def test_goto_dir_exits_with_highlighted_dir(tmp_path):
+    child = tmp_path / "subdir"
+    child.mkdir()
+    app = FileBrowserApp(tmp_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        tree = app.query_one(DirectoryTree)
+        node = next(
+            c
+            for c in tree.root.children
+            if c.data is not None and c.data.path.name == "subdir"
+        )
+        tree.cursor_line = node.line
+        await pilot.pause()
+        await pilot.press("g")
+        await pilot.pause()
+    assert app._return_value == child
+
+
+async def test_goto_dir_on_file_uses_parent(tmp_path):
+    (tmp_path / "hello.py").write_text("print('hi')\n")
+    app = FileBrowserApp(tmp_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        tree = app.query_one(DirectoryTree)
+        node = next(
+            c
+            for c in tree.root.children
+            if c.data is not None and c.data.path.name == "hello.py"
+        )
+        tree.cursor_line = node.line
+        await pilot.pause()
+        await pilot.press("g")
+        await pilot.pause()
+    assert app._return_value == tmp_path
+
+
 # ---------------------------------------------------------------------------
 # _get_git_info unit tests
 # ---------------------------------------------------------------------------
