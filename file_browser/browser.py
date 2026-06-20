@@ -6,6 +6,7 @@ TODO marker below for the remaining deferred feature (file operations).
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -205,6 +206,7 @@ class FileBrowserApp(App):
         Binding("r", "refresh_tree", "Refresh"),
         Binding("p", "toggle_preview", "Preview"),
         Binding("c", "open_claude", "Claude Code"),
+        Binding("g", "goto_dir", "Go to dir"),
     ]
 
     def __init__(self, start_path: Path) -> None:
@@ -265,6 +267,17 @@ class FileBrowserApp(App):
         with self.suspend():
             subprocess.run([claude], cwd=str(target_dir))
         self.query_one(DirectoryTree).reload()
+
+    def action_goto_dir(self) -> None:
+        """Exit the app and signal the shell to cd into the highlighted directory."""
+        tree = self.query_one(DirectoryTree)
+        node = tree.cursor_node
+        if node is None or node.data is None:
+            self.exit(result=Path(tree.path))
+            return
+        path = Path(node.data.path)
+        target = path if path.is_dir() else path.parent
+        self.exit(result=target)
 
     def action_toggle_preview(self) -> None:
         """Show or hide the preview panel, loading the selection when shown."""
@@ -362,7 +375,14 @@ def _resolve_start_path(argv: list[str]) -> Path:
 
 def main() -> None:
     start_path = _resolve_start_path(sys.argv)
-    FileBrowserApp(start_path).run()
+    app = FileBrowserApp(start_path)
+    result = app.run()
+    if isinstance(result, Path):
+        output_file = os.environ.get("FBROWSE_OUTPUT_FILE")
+        if output_file:
+            Path(output_file).write_text(str(result))
+        else:
+            print(result)
 
 
 if __name__ == "__main__":

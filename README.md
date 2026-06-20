@@ -99,12 +99,38 @@ uv run fbrowse /path/to/dir
 | `Right` / `Enter` | Expand the highlighted folder          |
 | `Left`          | Collapse the current folder              |
 | `Backspace`     | Reroot the tree at the parent directory  |
+| `l`             | Reroot the tree at the highlighted directory |
+| `g`             | Go to the highlighted directory and exit |
 | `r`             | Refresh / reload the tree                |
 | `p`             | Toggle the text-preview side panel       |
 | `c`             | Open Claude Code in the highlighted directory |
 | `q`             | Quit                                     |
 
 The current root directory is shown in the header subtitle.
+
+## Shell integration (cd on exit)
+
+Pressing `g` exits fbrowse and signals the shell to `cd` into the highlighted
+directory. Because a child process cannot change the parent shell's working
+directory directly, you need a small shell wrapper function.
+
+Add the following to your `~/.bashrc` or `~/.zshrc`:
+
+```sh
+fbcd() {
+  local tmp
+  tmp=$(mktemp)
+  FBROWSE_OUTPUT_FILE="$tmp" fbrowse "$@"
+  local dir
+  dir=$(cat "$tmp" 2>/dev/null)
+  rm -f "$tmp"
+  [ -n "$dir" ] && cd "$dir"
+}
+```
+
+Then use `fbcd` instead of `fbrowse` when you want the shell to follow you into
+the chosen directory. If you exit with `q` (quit) instead of `g`, no `cd`
+happens and the shell stays where it is.
 
 ## Claude Code integration
 
